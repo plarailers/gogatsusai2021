@@ -11,7 +11,7 @@
 
 ```
 sudo apt install socat
-pip3 install pyserial
+pip3 install RPi.GPIO pyserial
 ```
 
 ### PC から Raspberry Pi へのファイル転送
