@@ -19,16 +19,35 @@
     <div class="mt-3">
       <video id="remote-video"></video>
     </div>
+    <div class="mt-3">
+      <input type="range" class="form-control-range" id="speed-range" min="0" max="255" value="0">
+    </div>
   </div>
   <script src="https://unpkg.com/@open-ayame/ayame-web-sdk@2020.3.0/dist/ayame.min.js"></script>
   <script src="https://cdn.webrtc.ecl.ntt.com/skyway-latest.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.20/lodash.min.js" integrity="sha256-ur/YlHMU96MxHEsy3fHGszZHas7NzH4RQlD4tDVvFhw=" crossorigin="anonymous"></script>
   <script>
     const remoteVideo = document.getElementById('remote-video');
     const passwordInput = document.getElementById('password-input');
     const connectButton = document.getElementById('connect-button');
     const disconnectButton = document.getElementById('disconnect-button');
+    const speedRange = document.getElementById('speed-range');
 
-    const app = {};
+    class App {
+      sendToMomo(data) {
+        if (this.dataChannel && this.dataChannel.readyState === 'open') {
+          this.dataChannel.send(data);
+        }
+      }
+
+      sendToRoom(data) {
+        if (this.room) {
+          this.room.send(data);
+        }
+      }
+    }
+
+    const app = new App();
 
     connectButton.addEventListener('click', async () => {
       connectButton.disabled = true;
@@ -68,13 +87,6 @@
       if (!dataChannel) {
         throw new Error('failed to create dataChannel');
       }
-
-      const sendToMomo = (data) => {
-        if (dataChannel && dataChannel.readyState === 'open') {
-          dataChannel.send(data);
-        }
-      };
-      app.sendToMomo = sendToMomo;
 
       dataChannel.addEventListener('message', (e) => {
         const text = new TextDecoder().decode(e.data);
@@ -133,18 +145,9 @@
       room.on('data', ({ data, src }) => {
         console.log('room', 'data', data, src);
         if (data && typeof data.speed === 'number') {
-          if (typeof app.sendToMomo === 'function') {
-            app.sendToMomo(new Uint8Array([data.speed]));
-          }
+          app.sendToMomo(Uint8Array.of(data.speed));
         }
       });
-
-      const sendToRoom = (data) => {
-        if (app.room) {
-          app.room.send(data);
-        }
-      };
-      app.sendToRoom = sendToRoom;
 
       disconnectButton.disabled = false;
     });
@@ -166,6 +169,11 @@
 
       connectButton.disabled = false;
     });
+
+    speedRange.addEventListener('input', _.throttle(() => {
+      const data = +speedRange.value;
+      app.sendToMomo(Uint8Array.of(data));
+    }, 400));
   </script>
 </body>
 </html>
