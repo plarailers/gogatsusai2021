@@ -19,9 +19,13 @@
     <div class="mt-3">
       <video id="remote-video"></video>
     </div>
-    <div class="mt-3">
+    <form class="form-inline mt-3">
       <input type="range" class="form-control-range" id="speed-range" min="0" max="255" value="0">
-    </div>
+    </form>
+    <form class="form-inline mt-3">
+      <button type="button" class="btn btn-primary m-1" id="record-button">Record</button>
+      <button type="button" class="btn btn-secondary m-1" id="stop-button" disabled>Stop</button>
+    </form>
   </div>
   <script src="https://unpkg.com/@open-ayame/ayame-web-sdk@2020.3.0/dist/ayame.min.js"></script>
   <script src="https://cdn.webrtc.ecl.ntt.com/skyway-latest.min.js"></script>
@@ -32,6 +36,20 @@
     const connectButton = document.getElementById('connect-button');
     const disconnectButton = document.getElementById('disconnect-button');
     const speedRange = document.getElementById('speed-range');
+    const recordButton = document.getElementById('record-button');
+    const stopButton = document.getElementById('stop-button');
+
+    const getTime = () => {
+      const now = new Date();
+      return [
+        `${now.getFullYear()}`,
+        `0${now.getMonth() + 1}`.slice(-2),
+        `0${now.getDate()}`.slice(-2),
+        `0${now.getHours()}`.slice(-2),
+        `0${now.getMinutes()}`.slice(-2),
+        `0${now.getSeconds()}`.slice(-2),
+      ].join('');
+    };
 
     class App {
       sendToMomo(data) {
@@ -45,6 +63,30 @@
           this.room.send(data);
         }
       }
+
+      startRecording(stream) {
+        this.mediaRecorder = new MediaRecorder(stream);
+        this.mediaRecorder.addEventListener('dataavailable', (e) => {
+          const blob = new Blob([e.data], { type: e.data.type });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.style.display = 'none';
+          a.href = url;
+          a.download = `${getTime()}.webm`;
+          document.body.appendChild(a);
+          a.click();
+          URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+        });
+        this.mediaRecorder.start();
+      }
+
+      stopRecording() {
+        if (this.mediaRecorder) {
+          this.mediaRecorder.stop();
+          this.mediaRecorder = null;
+        }
+      }
     }
 
     const app = new App();
@@ -55,7 +97,7 @@
       const conn = Ayame.connection('ws://raspberrypi.local:8080/ws', '', {
         ...Ayame.defaultOptions,
         audio: { enabled: false },
-        video: { direction: 'recvonly', enabled: true, codec: 'H264' },
+        video: { direction: 'recvonly', enabled: true },
       });
       app.conn = conn;
 
@@ -104,76 +146,100 @@
         return fetch(endpoint).then((res) => res.json());
       }
 
-      const res = await authenticate(passwordInput.value);
-      console.log('auth', res);
-      if (res.code !== 0) {
-        throw new Error(res);
-      }
-
-      const peer = new Peer('master', {
-        key: 'cd8035c6-1b5d-4f1b-a7db-ef6e7e811fac',
-        credential: res.credential,
-        debug: 2,
-      });
-      app.peer = peer;
-
-      await new Promise((resolve, reject) => {
-        peer.on('open', () => {
-          console.log('peer', 'open');
-          resolve();
-        });
-      });
-
-      const room = peer.joinRoom('room', {
-        mode: 'mesh',
-        stream,
-      });
-      app.room = room;
-
-      room.on('open', () => {
-        console.log('room', 'open');
-      });
-
-      room.on('peerJoin', (peerId) => {
-        console.log('room', 'peerJoin', peerId);
-      });
-
-      room.on('peerLeave', (peerId) => {
-        console.log('room', 'peerLeave', peerId);
-      });
-
-      room.on('data', ({ data, src }) => {
-        console.log('room', 'data', data, src);
-        if (data && typeof data.speed === 'number') {
-          app.sendToMomo(Uint8Array.of(data.speed));
+      if (passwordInput.value) {
+        const res = await authenticate(passwordInput.value);
+        console.log('auth', res);
+        if (res.code !== 0) {
+          throw new Error(res);
         }
-      });
+
+        const peer = new Peer('master', {
+          key: 'cd8035c6-1b5d-4f1b-a7db-ef6e7e811fac',
+          credential: res.credential,
+          debug: 2,
+        });
+        app.peer = peer;
+
+        await new Promise((resolve, reject) => {
+          peer.on('open', () => {
+            console.log('peer', 'open');
+            resolve();
+          });
+        });
+
+        const room = peer.joinRoom('room', {
+          mode: 'mesh',
+          stream,
+        });
+        app.room = room;
+
+        room.on('open', () => {
+          console.log('room', 'open');
+        });
+
+        room.on('peerJoin', (peerId) => {
+          console.log('room', 'peerJoin', peerId);
+        });
+
+        room.on('peerLeave', (peerId) => {
+          console.log('room', 'peerLeave', peerId);
+        });
+
+        room.on('data', ({ data, src }) => {
+          console.log('room', 'data', data, src);
+          if (data && typeof data.speed === 'number') {
+            app.sendToMomo(Uint8Array.of(data.speed));
+          }
+        });
+      }
 
       disconnectButton.disabled = false;
     });
 
     disconnectButton.addEventListener('click', () => {
       disconnectButton.disabled = true;
+      stopButton.disabled = true;
 
-      const room = app.room;
-      room.close();
+      if (app.room) {
+        app.room.close();
+        app.room = null;
+      }
 
-      const peer = app.peer;
-      peer.destroy();
+      if (app.peer) {
+        app.peer.destroy();
+        app.peer = null;
+      }
 
-      const conn = app.conn;
-      conn.disconnect();
+      if (app.conn) {
+        app.conn.disconnect();
+        app.conn = null;
+      }
 
       remoteVideo.srcObject = null;
       remoteVideo.pause();
 
       connectButton.disabled = false;
+      recordButton.disabled = false;
     });
 
     speedRange.addEventListener('input', _.throttle(() => {
       const data = +speedRange.value;
       app.sendToMomo(Uint8Array.of(data));
     }, 400));
+
+    recordButton.addEventListener('click', () => {
+      if (app.stream) {
+        recordButton.disabled = true;
+        app.startRecording(app.stream);
+        stopButton.disabled = false;
+      }
+    });
+
+    stopButton.addEventListener('click', () => {
+      stopButton.disabled = true;
+      app.stopRecording();
+      recordButton.disabled = false;
+    });
   </script>
 </body>
 </html>
