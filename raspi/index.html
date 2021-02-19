@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Master</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+</head>
+<body>
+  <header class="navbar navbar-dark bg-dark">
+    <span class="navbar-brand">Master</span>
+  </header>
+  <div class="container py-3">
+    <form class="form-inline">
+      <input type="password" class="form-control m-1" id="password-input" placeholder="Password">
+      <button type="button" class="btn btn-primary m-1" id="connect-button">Connect</button>
+      <button type="button" class="btn btn-secondary m-1" id="disconnect-button" disabled>Disconnect</button>
+    </form>
+    <div class="mt-3">
+      <video id="remote-video"></video>
+    </div>
+  </div>
+  <script src="https://unpkg.com/@open-ayame/ayame-web-sdk@2020.3.0/dist/ayame.min.js"></script>
+  <script src="https://cdn.webrtc.ecl.ntt.com/skyway-latest.min.js"></script>
+  <script>
+    const remoteVideo = document.getElementById('remote-video');
+    const passwordInput = document.getElementById('password-input');
+    const connectButton = document.getElementById('connect-button');
+    const disconnectButton = document.getElementById('disconnect-button');
+
+    const app = {};
+
+    connectButton.addEventListener('click', async () => {
+      connectButton.disabled = true;
+
+      const conn = Ayame.connection('ws://raspberrypi.local:8080/ws', '', {
+        ...Ayame.defaultOptions,
+        audio: { enabled: false },
+        video: { direction: 'recvonly', enabled: true, codec: 'H264' },
+      });
+      app.conn = conn;
+
+      conn.connect(null);
+
+      const [dataChannel, stream] = await Promise.all([
+        new Promise((resolve, reject) => {
+          conn.on('open', async () => {
+            console.log('ayame', 'open');
+            const dataChannel = await conn.createDataChannel('serial');
+            console.log('ayame', 'datachannel');
+            resolve(dataChannel);
+          });
+        }),
+        new Promise((resolve, reject) => {
+          conn.on('addstream', (e) => {
+            console.log('ayame', 'addstream');
+            resolve(e.stream);
+          });
+        }),
+      ]);
+
+      app.dataChannel = dataChannel;
+      app.stream = stream;
+
+      remoteVideo.srcObject = stream;
+      remoteVideo.play();
+
+      if (!dataChannel) {
+        throw new Error('failed to create dataChannel');
+      }
+
+      const sendToMomo = (data) => {
+        if (dataChannel && dataChannel.readyState === 'open') {
+          dataChannel.send(data);
+        }
+      };
+      app.sendToMomo = sendToMomo;
+
+      dataChannel.addEventListener('message', (e) => {
+        const text = new TextDecoder().decode(e.data);
+        console.log(text);
+      });
+
+      conn.on('disconnect', (e) => {
+        console.log('ayame', 'disconnect');
+      });
+
+      function authenticate(password) {
+        const endpoint = new URL('https://script.google.com/macros/s/AKfycbwOHievy8jRNhB2SM2A0gL3V3Aku7cnklc28JUc2j-ixtxwXPI/exec');
+        endpoint.searchParams.set('peerId', 'master');
+        endpoint.searchParams.set('password', password);
+        return fetch(endpoint).then((res) => res.json());
+      }
+
+      const res = await authenticate(passwordInput.value);
+      console.log('auth', res);
+      if (res.code !== 0) {
+        throw new Error(res);
+      }
+
+      const peer = new Peer('master', {
+        key: 'cd8035c6-1b5d-4f1b-a7db-ef6e7e811fac',
+        credential: res.credential,
+        debug: 2,
+      });
+      app.peer = peer;
+
+      await new Promise((resolve, reject) => {
+        peer.on('open', () => {
+          console.log('peer', 'open');
+          resolve();
+        });
+      });
+
+      const room = peer.joinRoom('room', {
+        mode: 'mesh',
+        stream,
+      });
+      app.room = room;
+
+      room.on('open', () => {
+        console.log('room', 'open');
+      });
+
+      room.on('peerJoin', (peerId) => {
+        console.log('room', 'peerJoin', peerId);
+      });
+
+      room.on('peerLeave', (peerId) => {
+        console.log('room', 'peerLeave', peerId);
+      });
+
+      room.on('data', ({ data, src }) => {
+        console.log('room', 'data', data, src);
+        if (data && typeof data.speed === 'number') {
+          if (typeof app.sendToMomo === 'function') {
+            app.sendToMomo(new Uint8Array([data.speed]));
+          }
+        }
+      });
+
+      const sendToRoom = (data) => {
+        if (app.room) {
+          app.room.send(data);
+        }
+      };
+      app.sendToRoom = sendToRoom;
+
+      disconnectButton.disabled = false;
+    });
+
+    disconnectButton.addEventListener('click', () => {
+      disconnectButton.disabled = true;
+
+      const room = app.room;
+      room.close();
+
+      const peer = app.peer;
+      peer.destroy();
+
+      const conn = app.conn;
+      conn.disconnect();
+
+      remoteVideo.srcObject = null;
+      remoteVideo.pause();
+
+      connectButton.disabled = false;
+    });
+  </script>
+</body>
+</html>
