@@ -67,7 +67,7 @@ def setup():
     print('Ctrl+C to quit')
     #inp = float(input("input speed"))
 
-def on_sensor(channel):
+def on_sensor(channel):#磁石を検知したときに呼び出される
     global est, timer2
     data = b'o\n'
     port.write(data)
@@ -88,8 +88,8 @@ def loop():
         #dc = speed * 100 / 255
         #motor.ChangeDutyCycle(dc)
         print(datetime.datetime.now(), 'receive speed', speed)
-    #inp = float(input())
-    speed = inp / 255 * maxspeed
+    
+    speed = inp * maxspeed#速度目標値[m/s]
     dc = dc_control()
     motor.ChangeDutyCycle(dc)
 
@@ -116,7 +116,6 @@ def dc_control():#dcを制御
     timer1 = current_time
 
     dc = speed2dc()#フィードフォワード制御
-    print("dc1",dc)
     dc += Kp * error[0] + Kd * (error[0] - error[1]) / dt#PD制御
 
     if dc > 100:
@@ -140,8 +139,8 @@ if __name__ == '__main__':
             time.sleep(0.01)
 
             if not input_queue.empty():
-                inp = float(input_queue.get())
-                print("dc is updated to",inp)
+                inp = float(input_queue.get())#speed = inp/maxspeed
+                print("inp is updated to",inp)
 
     except KeyboardInterrupt:
         print('interrupted')
