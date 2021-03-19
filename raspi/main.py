@@ -65,7 +65,6 @@ def setup():
     print('sensor:', SENSOR_PIN)
     print('running at http://raspberrypi.local:8080/')
     print('Ctrl+C to quit')
-    #inp = float(input("input speed"))
 
 def on_sensor(channel):#磁石を検知したときに呼び出される
     global est, timer2
