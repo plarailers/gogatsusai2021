@@ -10,6 +10,8 @@ import serial
 import numpy as np
 import queue
 import threading
+import cv2
+from detect_sign import detect
 
 ###パラメータ###############################
 sp100 = 8.0#dc=100の時の速度[m/s]
@@ -28,7 +30,7 @@ GPIO.setup(SENSOR_PIN, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 
 motor = GPIO.PWM(MOTOR_PIN, 50)
 
-MOMO_BIN = os.path.expanduser('~/momo-2020.8.1_raspberry-pi-os_armv6/momo')
+# MOMO_BIN = os.path.expanduser('~/momo-2020.8.1_raspberry-pi-os_armv6/momo')
 
 process_socat = None
 process_momo = None
@@ -51,13 +53,13 @@ def add_input(input_queue):
 def setup():
     global process_socat, process_momo, port, inp
     print('starting...')
-    process_socat = subprocess.Popen(['socat', '-d', '-d', 'pty,raw,echo=0', 'pty,raw,echo=0'], stderr=subprocess.PIPE)
-    port1_name = re.search(r'N PTY is (\S+)', process_socat.stderr.readline().decode()).group(1)
-    port2_name = re.search(r'N PTY is (\S+)', process_socat.stderr.readline().decode()).group(1)
-    process_socat.stderr.readline()
-    print('using ports', port1_name, 'and', port2_name)
-    process_momo = subprocess.Popen([MOMO_BIN, '--no-audio-device', '--use-native', '--force-i420', '--serial', f'{port1_name},9600', 'test'])
-    port = serial.Serial(port2_name, 9600)
+    # process_socat = subprocess.Popen(['socat', '-d', '-d', 'pty,raw,echo=0', 'pty,raw,echo=0'], stderr=subprocess.PIPE)
+    # port1_name = re.search(r'N PTY is (\S+)', process_socat.stderr.readline().decode()).group(1)
+    # port2_name = re.search(r'N PTY is (\S+)', process_socat.stderr.readline().decode()).group(1)
+    # process_socat.stderr.readline()
+    # print('using ports', port1_name, 'and', port2_name)
+    # process_momo = subprocess.Popen([MOMO_BIN, '--no-audio-device', '--use-native', '--force-i420', '--serial', f'{port1_name},9600', 'test'])
+    # port = serial.Serial(port2_name, 9600)
     motor.start(0)
     GPIO.add_event_detect(SENSOR_PIN, GPIO.RISING, callback=on_sensor, bouncetime=10)
     print('started')
@@ -68,10 +70,10 @@ def setup():
 
 def on_sensor(channel):#磁石を検知したときに呼び出される
     global est, timer2
-    data = b'o\n'
-    port.write(data)
-    port.flush()
-    print(datetime.datetime.now(), 'send sensor', data)
+    # data = b'o\n'
+    # port.write(data)
+    # port.flush()
+    # print(datetime.datetime.now(), 'send sensor', data)
 
     current_time = time.time()
     dt = current_time - timer2
@@ -81,12 +83,12 @@ def on_sensor(channel):#磁石を検知したときに呼び出される
 
 def loop():
     global speed,est,inp
-    while port.in_waiting > 0:
-        data = port.read()
-        #speed = data[0] / 255 * maxspeed#速度目標値
-        #dc = speed * 100 / 255
-        #motor.ChangeDutyCycle(dc)
-        print(datetime.datetime.now(), 'receive speed', speed)
+    # while port.in_waiting > 0:
+    #     data = port.read()
+    #     #speed = data[0] / 255 * maxspeed#速度目標値
+    #     #dc = speed * 100 / 255
+    #     #motor.ChangeDutyCycle(dc)
+    #     print(datetime.datetime.now(), 'receive speed', speed)
     
     speed = inp * maxspeed#速度目標値[m/s]
     dc = dc_control()
@@ -125,6 +127,19 @@ def dc_control():#dcを制御
     return dc
 
 if __name__ == '__main__':
+    input_path = 0
+    output_path = 'movie.mp4'
+
+    cap = cv2.VideoCapture(input_path)
+    cap.set(cv2.CAP_PROP_FPS, 5)
+    fps = int(cap.get(cv2.CAP_PROP_FPS))
+    print("fps",fps)
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    writer = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+
     try:
         setup()
         input_queue = queue.Queue()
@@ -132,10 +147,21 @@ if __name__ == '__main__':
         input_thread = threading.Thread(target=add_input, args=(input_queue,))
         input_thread.daemon = True
         input_thread.start()
+        stop_dist = 400
 
         while True:
             loop()
             time.sleep(0.01)
+
+            ret, frame = cap.read()
+            if not ret:
+                break
+            dist = detect(frame, debug=True)
+            print(dist)
+            writer.write(frame)
+
+            if dist is not None and dist < stop_dist:
+                inp = 0.0
 
             if not input_queue.empty():
                 inp = float(input_queue.get())#speed = inp/maxspeed
@@ -148,9 +174,13 @@ if __name__ == '__main__':
     finally:
         motor.stop()
         GPIO.cleanup()
-        if port:
-            port.close()
-        if process_momo:
-            process_momo.terminate()
-        if process_socat:
-            process_socat.terminate()
+        # if port:
+        #     port.close()
+        # if process_momo:
+        #     process_momo.terminate()
+        # if process_socat:
+        #     process_socat.terminate()
+
+        writer.release()
+        cap.release()
+        print('done')
