@@ -70,6 +70,7 @@ def detect(frame, debug=False):
     for contour in contours:
         x, y, w, h = cv2.boundingRect(contour)
         _, minWH, angle = cv2.minAreaRect(contour) # 最小の四角形
+        angle = abs(angle)
         minW, minH = minWH
         if w > height * 0.04 and h > height * 0.04 and 35 <= angle <= 55 and 0.6*w < minW < 0.9*w and 0.6*h < minH < 0.9*h:
             detected = True
