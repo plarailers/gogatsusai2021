@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-FPS = 25
+FPS = 30
 W = 640
 BUF = 1
 slow_inp = 15
@@ -35,13 +35,13 @@ r = 1.4e-2#車輪の半径[m]
 
 timer1 = 0
 timer2 = 0
+newtime = 0
+oldtime = 0
 #dc = 0
 speed = 0
 est = 0
 error = [0,0]
 inp = 0
-
-FPS = 1
 
 def add_input(input_queue):
     while True:
@@ -130,6 +130,9 @@ if __name__ == '__main__':
         input_thread.start()
 
         while True:
+            oldtime = newtime
+            newtime = time.time()
+            print("interval:", newtime - oldtime)
             loop()
             time.sleep(0.01)
 
