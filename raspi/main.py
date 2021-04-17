@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 FPS = 25
-W = 320
+W = 640
 BUF = 1
 slow_inp = 15
 stop_dist = 200
