@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+FPS = 25
+W = 320
+BUF = 1
+slow_inp = 15
+stop_dist = 200
+slow_dist = 500
 
 import time
 import RPi.GPIO as GPIO
@@ -35,6 +41,8 @@ est = 0
 error = [0,0]
 inp = 0
 
+FPS = 1
+
 def add_input(input_queue):
     while True:
         input_queue.put(input("目標値を入力してください"))
@@ -60,7 +68,7 @@ def on_sensor(channel):#磁石を検知したときに呼び出される
 
 def loop():
     global speed,est,inp
-    speed = inp * maxspeed#速度目標値[m/s]
+    speed = inp * maxspeed / 100#速度目標値[m/s]
     dc = dc_control()
     motor.ChangeDutyCycle(dc)
 
@@ -101,8 +109,11 @@ if __name__ == '__main__':
     output_path = 'movie.mp4'
 
     cap = cv2.VideoCapture(input_path)
-    cap.set(cv2.CAP_PROP_FPS, 5)
+    cap.set(cv2.CAP_PROP_FPS, FPS)
     fps = int(cap.get(cv2.CAP_PROP_FPS))
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, W)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, W*3/4)
+    cap.set(cv2.CAP_PROP_BUFFERSIZE, BUF)
     print("fps",fps)
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -117,7 +128,6 @@ if __name__ == '__main__':
         input_thread = threading.Thread(target=add_input, args=(input_queue,))
         input_thread.daemon = True
         input_thread.start()
-        stop_dist = 400
 
         while True:
             loop()
@@ -132,6 +142,8 @@ if __name__ == '__main__':
 
             if dist is not None and dist < stop_dist:
                 inp = 0.0
+            elif dist is not None and dist < slow_dist:
+                inp = slow_inp
 
             if not input_queue.empty():
                 inp = float(input_queue.get())#speed = inp/maxspeed
