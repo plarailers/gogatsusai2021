@@ -141,10 +141,16 @@ if __name__ == '__main__':
                 break
             dist = detect(frame, debug=True)
             print(dist)
+            signal = //insert function coded by ono
+            print(signal)
+            
             writer.write(frame)
-
             if dist is not None and dist < stop_dist:
-                inp = 0.0
+                if singnal == 0:
+                    inp = 0.0
+                elif singnal == 1:
+                    inp = 20
+                
             elif dist is not None and dist < slow_dist:
                 inp = slow_inp
 
