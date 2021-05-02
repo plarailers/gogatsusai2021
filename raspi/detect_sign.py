@@ -82,7 +82,7 @@ def detect(frame, debug=False):
 
             # デバッグ用（矩形と輪郭の表示）
             if debug:
-                cv2.drawContours(frame, [contour], 0, (0, 255, 0), 3)
+                cv2.drawContours(frame, [contour], 0, (0, 255, 0), 3, offset=(0, trim_top))
                 cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 0, 255), 2)
 
     if detected:

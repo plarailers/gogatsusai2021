@@ -108,7 +108,7 @@ def detect(frame, debug=False):
                     color = (255, 0, 0)
                 else:
                     color = (0, 255, 0)
-                cv2.drawContours(frame, [contour], 0, color, 2)
+                cv2.drawContours(frame, [contour], 0, color, 2, offset=(0, trim_top))
 
             # デバッグ用（傾きの表示）
             if debug:
