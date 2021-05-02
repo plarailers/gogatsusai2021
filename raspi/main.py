@@ -6,6 +6,7 @@ slow_inp = 15
 stop_dist = 300
 slow_dist = 700
 cruise_inp = 40
+stop_time = 3
 
 import time
 import RPi.GPIO as GPIO
@@ -143,12 +144,12 @@ if __name__ == '__main__':
             ret, frame = cap.read()
             if not ret:
                 break
-            result = detect_signal.detect(frame, debug=False)
+            result = detect_signal.detect(frame, debug=True)
             print("Red is "+str(result.red))
-            dist = detect_sign.detect(frame, debug=False)
+            dist = detect_sign.detect(frame, debug=True)
             print(dist)
             
-            #writer.write(frame)
+            writer.write(frame)
 	    
             if dist is not None and dist < stop_dist:
                  if result.red:
@@ -157,8 +158,10 @@ if __name__ == '__main__':
                      inp = cruise_inp
             elif dist is not None and dist < slow_dist:
                  inp = 20
-            elif dist is None:
+            elif est < 0.1:
+                 time.sleep(stop_time)
                  inp = cruise_inp
+                 time.sleep(2)
             if not input_queue.empty():
                 inp = float(input_queue.get())#speed = inp/maxspeed
                 print("inp is updated to",inp)
