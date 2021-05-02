@@ -46,8 +46,12 @@ def detect(frame, debug=False):
 
     height, width, _ = frame.shape
 
+    # 処理効率のため一部分のみ切り取る
+    trim_top, trim_bottom = int(0.3 * height), int(0.8 * height)
+    partial_frame = frame[trim_top:trim_bottom, :]
+
     # グレイスケールによる二値化
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    gray = cv2.cvtColor(partial_frame, cv2.COLOR_BGR2GRAY)
 
     _ret, mask = cv2.threshold(gray, 32, 255, cv2.THRESH_BINARY_INV)
 
@@ -56,7 +60,12 @@ def detect(frame, debug=False):
 
     for contour in contours:
         x, y, w, h = cv2.boundingRect(contour)
-        cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 255, 255), 1)
+        y += trim_top # 切り取られる前の実際の位置
+
+        # デバッグ用（矩形の表示）
+        if debug:
+            cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 255, 255), 1)
+ 
         if (# 大きさによるフィルター
             height * 0.04 < w < height * 0.40 and
             height * 0.04 < h < height * 0.40 and
@@ -103,12 +112,12 @@ def detect(frame, debug=False):
 
             # デバッグ用（傾きの表示）
             if debug:
-                rows, cols, _ = frame.shape
                 vx, vy, x, y = cv2.fitLine(contour, cv2.DIST_L2, 0, 0.01, 0.01)
+                y += trim_top # 切り取られる前の実際の位置
                 angle = np.arctan2(vy, vx)
-                lefty = int((-x * vy / vx) + y)
-                righty = int(((cols - x) * vy / vx) + y)
-                cv2.line(frame, (cols - 1, righty), (0, lefty), color, 2)
+                left_y = int((-x * vy / vx) + y)
+                right_y = int(((width - x) * vy / vx) + y)
+                cv2.line(frame, (width - 1, right_y), (0, left_y), color, 2)
 
     return result
 

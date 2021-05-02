@@ -27,13 +27,6 @@ def extract(frame):
         ] = 255
     return mask
 
-    mask[
-        (h < 250 / 2) | (h > 350 / 2)
-        | (s < 70) | (s > 170)
-        | (v < 110) | (v > 210)
-        ] = 255
-    return mask
-
 
 def diagonal_height_ratio(h, height):
     """画面の高さに対する赤い四角形の高さを返す。"""
@@ -60,32 +53,45 @@ def detect(frame, debug=False):
     """
 
     height, width, _ = frame.shape
-    mask = extract(frame)
-    contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    detected = False
-    detected_contours = []
 
-    # 画面に占める枠の割合が縦横共に0.04以上なら
+    # 処理効率のため一部分のみ切り取る
+    trim_top, trim_bottom = int(0.3 * height), int(0.8 * height)
+    partial_frame = frame[trim_top:trim_bottom, :]
+
+    mask = extract(partial_frame)
+
+    contours, _hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    detected = False
+
     w_max, h_max = -1, -1
     for contour in contours:
         x, y, w, h = cv2.boundingRect(contour)
+        y += trim_top # 切り取られる前の実際の位置
+
+        # 画面に占める大きさで弾く
+        if not(w > height * 0.04 and h > height * 0.04):
+            continue
+
         _, minWH, angle = cv2.minAreaRect(contour) # 最小の四角形
         angle = abs(angle)
         minW, minH = minWH
-        if w > height * 0.04 and h > height * 0.04 and 35 <= angle <= 55 and 0.6*w < minW < 0.9*w and 0.6*h < minH < 0.9*h:
+
+        if 35 <= angle <= 55 and 0.6*w < minW < 0.9*w and 0.6*h < minH < 0.9*h:
             detected = True
-            detected_contours.append(contour)
-            if debug:
-                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 0, 255), 2)
             w_max, h_max = max(w, w_max), max(h, h_max)
+
+            # デバッグ用（矩形と輪郭の表示）
+            if debug:
+                cv2.drawContours(frame, [contour], 0, (0, 255, 0), 3)
+                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 0, 255), 2)
 
     if detected:
         dist = distance(h_max, height)
     else:
         dist = None
 
+    # デバッグ用（テキストの表示）
     if debug:
-        cv2.drawContours(frame, detected_contours, -1, (0, 255, 0), 3)
         putText(frame, w_max, h_max, dist)
 
     return dist
