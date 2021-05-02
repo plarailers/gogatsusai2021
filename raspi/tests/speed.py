@@ -18,7 +18,7 @@ timer2 = 0
 est = 0
 
 def setup():
-    GPIO.add_event_detect(SENSOR_PIN, GPIO.RISING, callback=on_sensor, bouncetime=10)
+    GPIO.add_event_detect(SENSOR_PIN, GPIO.RISING, callback=on_sensor, bouncetime=50)
     motor.start(0)
 
 def on_sensor(channel):
@@ -28,7 +28,8 @@ def on_sensor(channel):
     dt = current_time - timer2
     timer2 = current_time
 
-    est = 2 * np.pi * r / dt
+    est =  2 * np.pi * r / dt
+    print("ホールセンサ読んだよ!!!!!")
 
 if __name__ == '__main__':
     try:
@@ -38,6 +39,7 @@ if __name__ == '__main__':
         while True:
             #motor.ChangeDutyCycle(dc)
             print("Estimated speed is",est,"when dc is",dc)
+            #print("ホールセンサ読んだよ!!!!!")
             time.sleep(0.5)
     except KeyboardInterrupt:
         print('interrupted')
