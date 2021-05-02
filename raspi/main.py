@@ -3,8 +3,9 @@ FPS = 30
 W = 640
 BUF = 1
 slow_inp = 15
-stop_dist = 200
-slow_dist = 500
+stop_dist = 300
+slow_dist = 700
+cruise_inp = 40
 
 import time
 import RPi.GPIO as GPIO
@@ -142,21 +143,22 @@ if __name__ == '__main__':
             ret, frame = cap.read()
             if not ret:
                 break
-            result = detect_signal.detect(frame, debug=True)
-            print(result)
-            # dist = detect_sign.detect(frame, debug=True)
-            # print(dist)
+            result = detect_signal.detect(frame, debug=False)
+            print("Red is "+str(result.red))
+            dist = detect_sign.detect(frame, debug=False)
+            print(dist)
             
-            writer.write(frame)
-            # if dist is not None and dist < stop_dist:
-            #     if result.red:
-            #         inp = 0.0
-            #     elif result.blue:
-            #         inp = 20
-                
-            # elif dist is not None and dist < slow_dist:
-            #     inp = slow_inp
-
+            #writer.write(frame)
+	    
+            if dist is not None and dist < stop_dist:
+                 if result.red:
+                     inp = 0.0
+                 elif result.blue:
+                     inp = cruise_inp
+            elif dist is not None and dist < slow_dist:
+                 inp = 20
+            elif dist is None:
+                 inp = cruise_inp
             if not input_queue.empty():
                 inp = float(input_queue.get())#speed = inp/maxspeed
                 print("inp is updated to",inp)
