@@ -12,7 +12,8 @@ import numpy as np
 import queue
 import threading
 import cv2
-from detect_sign import detect
+# from detect_sign import detect
+from detect_signal import detect
 
 ###パラメータ###############################
 sp100 = 8.0#dc=100の時の速度[m/s]
@@ -139,20 +140,22 @@ if __name__ == '__main__':
             ret, frame = cap.read()
             if not ret:
                 break
-            dist = detect(frame, debug=True)
-            print(dist)
-            signal = //insert function coded by ono
-            print(signal)
+            result = detect(frame, debug=True)
+            print(result)
+            # dist = detect(frame, debug=True)
+            # print(dist)
+            # signal = //insert function coded by ono
+            # print(signal)
             
             writer.write(frame)
-            if dist is not None and dist < stop_dist:
-                if singnal == 0:
-                    inp = 0.0
-                elif singnal == 1:
-                    inp = 20
+            # if dist is not None and dist < stop_dist:
+            #     if singnal == 0:
+            #         inp = 0.0
+            #     elif singnal == 1:
+            #         inp = 20
                 
-            elif dist is not None and dist < slow_dist:
-                inp = slow_inp
+            # elif dist is not None and dist < slow_dist:
+            #     inp = slow_inp
 
             if not input_queue.empty():
                 inp = float(input_queue.get())#speed = inp/maxspeed
