@@ -54,8 +54,6 @@ def detect(frame, debug=False):
     # 領域抽出
     contours, _hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-    mask = np.zeros_like(frame)
-
     for contour in contours:
         x, y, w, h = cv2.boundingRect(contour)
         cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 255, 255), 1)
@@ -67,9 +65,6 @@ def detect(frame, debug=False):
             # 位置によるフィルター
             width * 0.3 <= x + w and height * 0.4 <= y + h
         ):
-
-            cv2.drawContours(mask, [contour], 0, (255, 255, 255), -1)
-
             # 処理効率のため輪郭部分についてのみ判定
             rect = frame[y : y + h, x : x + w]
             hsv = cv2.cvtColor(rect, cv2.COLOR_BGR2HSV_FULL)
