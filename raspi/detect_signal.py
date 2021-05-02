@@ -61,9 +61,7 @@ def detect(frame, debug=False):
             height * 0.04 < w < height * 0.40 and
             height * 0.04 < h < height * 0.40 and
             # 縦横比によるフィルター
-            0.8 <= h / w <= 1.25 and
-            # 位置によるフィルター
-            width * 0.3 <= x + w and height * 0.4 <= y + h
+            0.8 <= h / w <= 1.25
         ):
             # 処理効率のため輪郭部分についてのみ判定
             rect = frame[y : y + h, x : x + w]
