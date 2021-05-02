@@ -115,7 +115,7 @@ def detect(frame, debug=False):
 
 # この中は `python3 detect_sign.py` で直接呼び出されたときのみ実行され、
 # モジュールとして読み込まれたときは実行されない
-if __name__ == '__main__':
+def main():
     input_path = 'path/to/input/movie' #入力動画ファイルへのpathを入れる
     output_path = 'path/to/output/movie' #出力動画ファイルへのpathに変更すること
 
@@ -138,3 +138,6 @@ if __name__ == '__main__':
     writer.release()
     cap.release()
     print('done')
+
+if __name__ == '__main__':
+    main()
