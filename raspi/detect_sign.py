@@ -39,7 +39,7 @@ def distance(h, height):
     return 29.4/a
 
 
-def detect(frame, debug=False):
+def detect(frame, inp, debug=False):
     """
     標識を検知する。
 
@@ -92,19 +92,21 @@ def detect(frame, debug=False):
 
     # デバッグ用（テキストの表示）
     if debug:
-        putText(frame, w_max, h_max, dist)
+        putText(frame, w_max, h_max, dist, inp)
 
     return dist
 
 
-def putText(frame, w, h, dist):
+def putText(frame, w, h, dist, inp):
     """赤い四角形のサイズや標識までの距離を動画に入れる。"""
     if (w < 0 or h < 0):
-        cv2.putText(frame, "red rect size: - * -", (50, 50), cv2.FONT_HERSHEY_PLAIN, 4, (0, 0, 255), 5, cv2.LINE_AA)
-        cv2.putText(frame, "distance: -mm", (50, 150), cv2.FONT_HERSHEY_PLAIN, 4, (0, 0, 255), 5, cv2.LINE_AA)
+        cv2.putText(frame, f"inp: {inp}", (50, 50), cv2.FONT_HERSHEY_PLAIN, 4, (0, 0, 255), 5, cv2.LINE_AA)
+        #cv2.putText(frame, "red rect size: - * -", (50, 50), cv2.FONT_HERSHEY_PLAIN, 4, (0, 0, 255), 5, cv2.LINE_AA)
+        cv2.putText(frame, "dist: -mm", (50, 150), cv2.FONT_HERSHEY_PLAIN, 4, (0, 0, 255), 5, cv2.LINE_AA)
     else:
-        cv2.putText(frame, f"red rect size: {w} * {h}", (50, 50), cv2.FONT_HERSHEY_PLAIN, 4, (0, 0, 255), 5, cv2.LINE_AA)
-        cv2.putText(frame, f"distance: {round(dist)}mm", (50, 150), cv2.FONT_HERSHEY_PLAIN, 4, (0, 0, 255), 5, cv2.LINE_AA)
+        cv2.putText(frame, f"inp: {inp}", (50, 50), cv2.FONT_HERSHEY_PLAIN, 4, (0, 0, 255), 5, cv2.LINE_AA)
+        #cv2.putText(frame, f"red rect size: {w} * {h}", (50, 50), cv2.FONT_HERSHEY_PLAIN, 4, (0, 0, 255), 5, cv2.LINE_AA)
+        cv2.putText(frame, f"dist: {round(dist)}mm", (50, 150), cv2.FONT_HERSHEY_PLAIN, 4, (0, 0, 255), 5, cv2.LINE_AA)
 
 
 # この中は `python3 detect_sign.py` で直接呼び出されたときのみ実行され、

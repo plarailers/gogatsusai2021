@@ -2,10 +2,11 @@
 FPS = 30
 W = 640
 BUF = 1
-slow_inp = 15
-stop_dist = 300
-slow_dist = 700
-cruise_inp = 40
+NORMAL_INP = 15
+slow_inp = 10
+stop_dist = 400
+slow_dist = 800
+cruise_inp = 20
 stop_time = 3
 
 import time
@@ -146,7 +147,7 @@ if __name__ == '__main__':
                 break
             result = detect_signal.detect(frame, debug=True)
             print("Red is "+str(result.red))
-            dist = detect_sign.detect(frame, debug=True)
+            dist = detect_sign.detect(frame, inp, debug=True)
             print(dist)
             
             writer.write(frame)
@@ -157,7 +158,7 @@ if __name__ == '__main__':
                  elif result.blue:
                      inp = cruise_inp
             elif dist is not None and dist < slow_dist:
-                 inp = 20
+                 inp = slow_inp
             elif est < 0.1:
                  time.sleep(stop_time)
                  inp = cruise_inp

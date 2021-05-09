@@ -70,7 +70,9 @@ def detect(frame, debug=False):
             height * 0.04 < w < height * 0.40 and
             height * 0.04 < h < height * 0.40 and
             # 縦横比によるフィルター
-            0.8 <= h / w <= 1.25
+            0.5 <= h / w <= 1.25 and
+            # 位置によるフィルター
+            x >= width * 0.5
         ):
             # 処理効率のため輪郭部分についてのみ判定
             rect = frame[y : y + h, x : x + w]
@@ -110,14 +112,14 @@ def detect(frame, debug=False):
                     color = (0, 255, 0)
                 cv2.drawContours(frame, [contour], 0, color, 2, offset=(0, trim_top))
 
-            # デバッグ用（傾きの表示）
-            if debug:
-                vx, vy, x, y = cv2.fitLine(contour, cv2.DIST_L2, 0, 0.01, 0.01)
-                y += trim_top # 切り取られる前の実際の位置
-                angle = np.arctan2(vy, vx)
-                left_y = int((-x * vy / vx) + y)
-                right_y = int(((width - x) * vy / vx) + y)
-                cv2.line(frame, (width - 1, right_y), (0, left_y), color, 2)
+            # # デバッグ用（傾きの表示）
+            # if debug:
+            #     vx, vy, x, y = cv2.fitLine(contour, cv2.DIST_L2, 0, 0.01, 0.01)
+            #     y += trim_top # 切り取られる前の実際の位置
+            #     angle = np.arctan2(vy, vx)
+            #     left_y = int((-x * vy / vx) + y)
+            #     right_y = int(((width - x) * vy / vx) + y)
+            #     cv2.line(frame, (width - 1, right_y), (0, left_y), color, 2)
 
     return result
 
